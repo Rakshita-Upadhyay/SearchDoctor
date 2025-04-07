@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Find Me a Doctor</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #0077b6;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.8rem;
+    }
+    #chat {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .message {
+      margin: 10px 0;
+    }
+    .bot {
+      background: #d0e8f2;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .user {
+      background: #bcd4e6;
+      padding: 10px;
+      text-align: right;
+      border-radius: 10px;
+    }
+    .doctor-card {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+    #inputArea {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    #userInput {
+      width: 60%;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px;
+      margin-left: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #00b4d8;
+      border: none;
+      color: white;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>Find Me a Doctor</header>
+  <div id="chat"></div>
+
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="Type or speak your query..."/>
+    <button onclick="processInput()">Send</button>
+    <button onclick="startVoice()">🎤</button>
+  </div>
+
+  <!-- Include the doctor data from dr.js -->
+  <script src="doctor.js"></script>
+
+  <script>
+    function appendMessage(text, type = 'bot') {
+      const msg = document.createElement('div');
+      msg.className = `message ${type}`;
+      msg.innerText = text;
+      document.getElementById('chat').appendChild(msg);
+    }
+
+    function extractDetails(input) {
+      const timeMatch = input.match(/(\d{1,2})(?::(\d{2}))?\s?(am|pm)?/i);
+      let userTime = null;
+      if (timeMatch) {
+        let hour = parseInt(timeMatch[1]);
+        let minute = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+        const period = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
+        if (period === 'pm' && hour < 12) hour += 12;
+        if (period === 'am' && hour === 12) hour = 0;
+        userTime = hour * 60 + minute;
+      }
+
+      const inputLower = input.toLowerCase();
+      let matchedSpec = null;
+      let symptom = null;
+
+      for (let spec in doctorData) {
+        for (let word of doctorData[spec].keywords) {
+          if (inputLower.includes(word)) {
+            matchedSpec = spec;
+            symptom = word;
+            break;
+          }
+        }
+        if (matchedSpec) break;
+      }
+
+      const locations = [ /* same list as before */ "Patel Nagar", "IT Park", "Sahastradhara Crossing", "Clement Town", "ISBT", "GMS Road", "Chakrata", "Rajpur Road", "Haridwar Bypass", "Balliwala Chowk", "Prem Nagar", "Dalanwala", "Mohini Road", "Subhash Nagar", "Shastri Nagar", "Saharanpur Road", "Kargi Grant", "Mussoorie Road", "Canal Road", "Badripur", "Dakpathar", "Nehru Colony", "Patel Chowk", "Bhaniyawala", "FRI", "Survey Chowk", "Astley Hall", "Doon School Area", "Raipur", "Barwala", "Bhagirathi Vihar", "Malsi", "Asha Puri", "Selaqui", "Paltan Bazar", "Barlowganj", "Vikasnagar", "Rishikesh Road", "Guchhupani", "Subedar Chonk", "Kalsi", "Khurbura", "Jolly Grant", "Chakrata Road", "Ajabpur Kalan", "Bhatta Falls", "Moti Bazar", "Old Mussoorie Road", "Clock Tower", "Tapkeshwar Temple Area", "Mindrolling Monastery", "IMA Area", "Lachhiwala", "Dharampur", "Race Course", "Ballupur", "Jakhan", "Pacific Hills", "Shivalik Enclave", "Defence Colony", "Turner Road" ];
+      const matchedLoc = locations.find(loc => inputLower.includes(loc.toLowerCase()));
+
+      return { specialization: matchedSpec, location: matchedLoc, time: userTime };
+    }
+
+    function timeInRange(timeStr, userTime) {
+      const [start, end] = timeStr.toLowerCase().split(" - ");
+      const toMinutes = str => {
+        let [time, mer] = [str, str.includes("am") ? "am" : "pm"];
+        let [h, m] = time.replace(/[^0-9:]/g, '').split(':').map(Number);
+        if (!m) m = 0;
+        if (mer === 'pm' && h < 12) h += 12;
+        if (mer === 'am' && h === 12) h = 0;
+        return h * 60 + m;
+      };
+      const startMins = toMinutes(start);
+      const endMins = toMinutes(end);
+      return userTime === null || (userTime >= startMins && userTime <= endMins);
+    }
+
+    function showDoctorCard(doc) {
+      const card = document.createElement('div');
+      card.className = 'doctor-card';
+      card.innerHTML = `
+        <strong>${doc.name}</strong><br/>
+        Specialization: ${doc.specialization}<br/>
+        Location: ${doc.location}<br/>
+        Timing: ${doc.timing}<br/><br/>
+        <button onclick="alert('Appointment booked with ${doc.name}')">Book Appointment</button>
+      `;
+      document.getElementById('chat').appendChild(card);
+    }
+
+    function processInput() {
+      const input = document.getElementById("userInput").value.trim();
+      if (!input) return;
+
+      appendMessage(input, 'user');
+      const { specialization, location, time } = extractDetails(input);
+
+      if (!specialization) {
+        appendMessage("Sorry, we couldn’t understand. Please mention symptoms, location and time.");
+        return;
+      }
+
+      const doctors = doctorData[specialization].list;
+      const filtered = doctors.filter(d =>
+        (!location || d.location.toLowerCase().includes(location.toLowerCase())) &&
+        timeInRange(d.timing, time)
+      );
+
+      if (filtered.length === 0) {
+        appendMessage(`No exact match found. Showing recommended ${specialization}:`);
+        showDoctorCard({...doctors[0], specialization});
+      } else {
+        filtered.forEach(doc => showDoctorCard({...doc, specialization}));
+      }
+
+      document.getElementById("userInput").value = '';
+    }
+
+    function startVoice() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        document.getElementById("userInput").value = event.results[0][0].transcript;
+        processInput();
+      };
+    }
+  </script>
+</body>
+</html>
