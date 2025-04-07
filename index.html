@@ -76,10 +76,12 @@
     <button onclick="startVoice()">🎤</button>
   </div>
 
-  <!-- Include the doctor data from dr.js -->
-  <script src="doctors.js"></script>
-
   <script>
+    let doctorData = {};
+    fetch('doctors.json')
+      .then(res => res.json())
+      .then(data => doctorData = data);
+
     function appendMessage(text, type = 'bot') {
       const msg = document.createElement('div');
       msg.className = `message ${type}`;
@@ -114,21 +116,27 @@
         if (matchedSpec) break;
       }
 
-      const locations = [ /* same list as before */ "Patel Nagar", "IT Park", "Sahastradhara Crossing", "Clement Town", "ISBT", "GMS Road", "Chakrata", "Rajpur Road", "Haridwar Bypass", "Balliwala Chowk", "Prem Nagar", "Dalanwala", "Mohini Road", "Subhash Nagar", "Shastri Nagar", "Saharanpur Road", "Kargi Grant", "Mussoorie Road", "Canal Road", "Badripur", "Dakpathar", "Nehru Colony", "Patel Chowk", "Bhaniyawala", "FRI", "Survey Chowk", "Astley Hall", "Doon School Area", "Raipur", "Barwala", "Bhagirathi Vihar", "Malsi", "Asha Puri", "Selaqui", "Paltan Bazar", "Barlowganj", "Vikasnagar", "Rishikesh Road", "Guchhupani", "Subedar Chonk", "Kalsi", "Khurbura", "Jolly Grant", "Chakrata Road", "Ajabpur Kalan", "Bhatta Falls", "Moti Bazar", "Old Mussoorie Road", "Clock Tower", "Tapkeshwar Temple Area", "Mindrolling Monastery", "IMA Area", "Lachhiwala", "Dharampur", "Race Course", "Ballupur", "Jakhan", "Pacific Hills", "Shivalik Enclave", "Defence Colony", "Turner Road" ];
+      const locations = [
+    "Patel Nagar", "IT Park", "Sahastradhara Crossing", "Clement Town", "ISBT", "GMS Road", "Chakrata", "Rajpur Road", "Haridwar Bypass", "Balliwala Chowk",
+    "Prem Nagar", "Dalanwala", "Mohini Road", "Subhash Nagar", "Shastri Nagar", "Saharanpur Road", "Kargi Grant", "Mussoorie Road", "Canal Road", "Badripur",
+    "Dakpathar", "Nehru Colony", "Patel Chowk", "Bhaniyawala", "FRI", "Survey Chowk", "Astley Hall", "Doon School Area", "Raipur", "Barwala", "Bhagirathi Vihar",
+    "Malsi", "Asha Puri", "Selaqui", "Paltan Bazar", "Barlowganj", "Vikasnagar", "Rishikesh Road", "Guchhupani", "Subedar Chonk", "Kalsi", "Khurbura",
+    "Jolly Grant", "Chakrata Road", "Ajabpur Kalan", "Bhatta Falls", "Moti Bazar", "Old Mussoorie Road", "Clock Tower", "Tapkeshwar Temple Area", "Mindrolling Monastery",
+    "IMA Area", "Lachhiwala", "Dharampur", "Race Course", "Ballupur", "Jakhan", "Pacific Hills", "Shivalik Enclave", "Defence Colony", "Turner Road"
+];
       const matchedLoc = locations.find(loc => inputLower.includes(loc.toLowerCase()));
 
       return { specialization: matchedSpec, location: matchedLoc, time: userTime };
     }
 
     function timeInRange(timeStr, userTime) {
-      const [start, end] = timeStr.toLowerCase().split(" - ");
+      const [start, end] = timeStr.split(" - ");
       const toMinutes = str => {
-        let [time, mer] = [str, str.includes("am") ? "am" : "pm"];
-        let [h, m] = time.replace(/[^0-9:]/g, '').split(':').map(Number);
-        if (!m) m = 0;
-        if (mer === 'pm' && h < 12) h += 12;
-        if (mer === 'am' && h === 12) h = 0;
-        return h * 60 + m;
+        let [h, mer] = [parseInt(str), str.includes("am") ? "am" : "pm"];
+        if (str.includes(":")) h = parseInt(str.split(":")[0]);
+        if (mer === "pm" && h < 12) h += 12;
+        if (mer === "am" && h === 12) h = 0;
+        return h * 60;
       };
       const startMins = toMinutes(start);
       const endMins = toMinutes(end);
