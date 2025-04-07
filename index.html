@@ -78,9 +78,16 @@
 
   <script>
     let doctorData = {};
+
     fetch('doctors.json')
-      .then(res => res.json())
-      .then(data => doctorData = data);
+      .then(response => response.json())
+      .then(data => {
+        doctorData = data;
+      })
+      .catch(error => {
+        console.error("Error loading doctor data:", error);
+        appendMessage("Failed to load doctor data.", 'bot');
+      });
 
     function appendMessage(text, type = 'bot') {
       const msg = document.createElement('div');
@@ -103,27 +110,17 @@
 
       const inputLower = input.toLowerCase();
       let matchedSpec = null;
-      let symptom = null;
-
       for (let spec in doctorData) {
         for (let word of doctorData[spec].keywords) {
           if (inputLower.includes(word)) {
             matchedSpec = spec;
-            symptom = word;
             break;
           }
         }
         if (matchedSpec) break;
       }
 
-      const locations = [
-    "Patel Nagar", "IT Park", "Sahastradhara Crossing", "Clement Town", "ISBT", "GMS Road", "Chakrata", "Rajpur Road", "Haridwar Bypass", "Balliwala Chowk",
-    "Prem Nagar", "Dalanwala", "Mohini Road", "Subhash Nagar", "Shastri Nagar", "Saharanpur Road", "Kargi Grant", "Mussoorie Road", "Canal Road", "Badripur",
-    "Dakpathar", "Nehru Colony", "Patel Chowk", "Bhaniyawala", "FRI", "Survey Chowk", "Astley Hall", "Doon School Area", "Raipur", "Barwala", "Bhagirathi Vihar",
-    "Malsi", "Asha Puri", "Selaqui", "Paltan Bazar", "Barlowganj", "Vikasnagar", "Rishikesh Road", "Guchhupani", "Subedar Chonk", "Kalsi", "Khurbura",
-    "Jolly Grant", "Chakrata Road", "Ajabpur Kalan", "Bhatta Falls", "Moti Bazar", "Old Mussoorie Road", "Clock Tower", "Tapkeshwar Temple Area", "Mindrolling Monastery",
-    "IMA Area", "Lachhiwala", "Dharampur", "Race Course", "Ballupur", "Jakhan", "Pacific Hills", "Shivalik Enclave", "Defence Colony", "Turner Road"
-];
+      const locations = [ /* your full list */ "Patel Nagar", "IT Park", "Sahastradhara Crossing", "Clement Town", "ISBT", "GMS Road", "Chakrata", "Rajpur Road", "Haridwar Bypass", "Balliwala Chowk", "Prem Nagar", "Dalanwala", "Mohini Road", "Subhash Nagar", "Shastri Nagar", "Saharanpur Road", "Kargi Grant", "Mussoorie Road", "Canal Road", "Badripur", "Dakpathar", "Nehru Colony", "Patel Chowk", "Bhaniyawala", "FRI", "Survey Chowk", "Astley Hall", "Doon School Area", "Raipur", "Barwala", "Bhagirathi Vihar", "Malsi", "Asha Puri", "Selaqui", "Paltan Bazar", "Barlowganj", "Vikasnagar", "Rishikesh Road", "Guchhupani", "Subedar Chonk", "Kalsi", "Khurbura", "Jolly Grant", "Chakrata Road", "Ajabpur Kalan", "Bhatta Falls", "Moti Bazar", "Old Mussoorie Road", "Clock Tower", "Tapkeshwar Temple Area", "Mindrolling Monastery", "IMA Area", "Lachhiwala", "Dharampur", "Race Course", "Ballupur", "Jakhan", "Pacific Hills", "Shivalik Enclave", "Defence Colony", "Turner Road"];
       const matchedLoc = locations.find(loc => inputLower.includes(loc.toLowerCase()));
 
       return { specialization: matchedSpec, location: matchedLoc, time: userTime };
@@ -132,10 +129,12 @@
     function timeInRange(timeStr, userTime) {
       const [start, end] = timeStr.split(" - ");
       const toMinutes = str => {
-        let [h, mer] = [parseInt(str), str.includes("am") ? "am" : "pm"];
+        let h = parseInt(str);
         if (str.includes(":")) h = parseInt(str.split(":")[0]);
-        if (mer === "pm" && h < 12) h += 12;
-        if (mer === "am" && h === 12) h = 0;
+        const isPM = str.toLowerCase().includes("pm");
+        const isAM = str.toLowerCase().includes("am");
+        if (isPM && h < 12) h += 12;
+        if (isAM && h === 12) h = 0;
         return h * 60;
       };
       const startMins = toMinutes(start);
@@ -168,7 +167,7 @@
         return;
       }
 
-      const doctors = doctorData[specialization].list;
+      const doctors = doctorData[specialization]?.list || [];
       const filtered = doctors.filter(d =>
         (!location || d.location.toLowerCase().includes(location.toLowerCase())) &&
         timeInRange(d.timing, time)
@@ -176,7 +175,11 @@
 
       if (filtered.length === 0) {
         appendMessage(`No exact match found. Showing recommended ${specialization}:`);
-        showDoctorCard({...doctors[0], specialization});
+        if (doctors.length > 0) {
+          showDoctorCard({...doctors[0], specialization});
+        } else {
+          appendMessage("No doctors available for that specialization.");
+        }
       } else {
         filtered.forEach(doc => showDoctorCard({...doc, specialization}));
       }
